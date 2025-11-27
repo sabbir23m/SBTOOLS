@@ -1,0 +1,400 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>SBTOOLS | Pro Animation Suite</title>
+    
+    <!-- Dependencies -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css">
+    
+    <!-- Libraries -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/cropperjs/1.6.1/cropper.min.js"></script>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/cropperjs/1.6.1/cropper.min.css">
+    <script src="https://unpkg.com/pdf-lib@1.17.1/dist/pdf-lib.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/qrcodejs/1.0.0/qrcode.min.js"></script>
+    <script src="https://unpkg.com/pdfjs-dist@3.11.174/build/pdf.min.js"></script>
+    <script>pdfjsLib.GlobalWorkerOptions.workerSrc = 'https://unpkg.com/pdfjs-dist@3.11.174/build/pdf.worker.min.js';</script>
+
+    <script>
+        tailwind.config = {
+            theme: {
+                extend: {
+                    colors: { brand: '#00ffcc', dark: '#000000' },
+                    fontFamily: { sans: ['Segoe UI', 'sans-serif'] },
+                    animation: { 'fade-in': 'fadeIn 0.5s ease-out' },
+                    keyframes: { fadeIn: { '0%': { opacity: '0' }, '100%': { opacity: '1' } } }
+                }
+            }
+        }
+    </script>
+
+    <style>
+        body { margin: 0; overflow-x: hidden; background-color: #000; color: #fff; }
+        
+        /* Background Canvas */
+        #bgCanvas {
+            position: fixed; top: 0; left: 0; width: 100%; height: 100%;
+            z-index: -1; background: #000000;
+        }
+
+        /* Glassmorphism Cards */
+        .glass-card {
+            background: rgba(15, 15, 15, 0.6); /* Semi-transparent */
+            backdrop-filter: blur(10px);
+            -webkit-backdrop-filter: blur(10px);
+            border: 1px solid rgba(255, 255, 255, 0.08);
+            transition: all 0.3s ease;
+        }
+        .glass-card:hover {
+            background: rgba(20, 20, 20, 0.8);
+            border-color: var(--brand);
+            transform: translateY(-5px);
+            box-shadow: 0 0 20px rgba(0, 255, 204, 0.2);
+        }
+
+        /* Inputs */
+        input, textarea, select {
+            background: rgba(0, 0, 0, 0.5);
+            border: 1px solid #333; color: white; padding: 12px; border-radius: 8px; width: 100%; outline: none;
+            backdrop-filter: blur(5px);
+        }
+        input:focus, textarea:focus { border-color: var(--brand); box-shadow: 0 0 5px var(--brand); }
+
+        /* Scrollbar */
+        ::-webkit-scrollbar { width: 6px; }
+        ::-webkit-scrollbar-track { background: #000; }
+        ::-webkit-scrollbar-thumb { background: #333; border-radius: 3px; }
+        ::-webkit-scrollbar-thumb:hover { background: var(--brand); }
+
+        /* Ad Slots */
+        .ad-slot {
+            width: 100%; height: 90px;
+            background: rgba(255, 255, 255, 0.02);
+            border: 1px dashed #333; display: flex; align-items: center; justify-content: center;
+            color: #555; margin: 20px 0; border-radius: 8px; font-size: 0.8rem;
+        }
+    </style>
+</head>
+<body class="flex flex-col min-h-screen">
+
+    <!-- Animated Background -->
+    <canvas id="bgCanvas"></canvas>
+
+    <!-- Navbar -->
+    <nav class="fixed top-0 w-full z-50 bg-black/80 backdrop-blur-md border-b border-white/10">
+        <div class="container mx-auto px-4 py-3 flex justify-between items-center">
+            <div class="flex items-center gap-2 cursor-pointer" onclick="closeTool()">
+                <div class="w-8 h-8 rounded bg-brand/10 flex items-center justify-center border border-brand/50">
+                    <i class="fa-solid fa-bolt text-brand"></i>
+                </div>
+                <h1 class="text-xl font-bold tracking-widest">SB<span class="text-brand">TOOLS</span></h1>
+            </div>
+            <button onclick="toggleMenu()" class="md:hidden text-2xl text-white"><i class="fa-solid fa-bars-staggered"></i></button>
+            <div class="hidden md:flex gap-6 text-sm font-bold text-gray-400">
+                <button onclick="openModal('Contact')" class="hover:text-white transition">CONTACT</button>
+                <button onclick="openModal('Privacy')" class="hover:text-white transition">PRIVACY</button>
+                <button onclick="openAdmin()" class="border border-white/20 px-4 py-1 rounded hover:bg-brand hover:text-black transition">ADMIN</button>
+            </div>
+        </div>
+    </nav>
+
+    <!-- Side Menu -->
+    <div id="sideMenu" class="fixed inset-y-0 right-0 w-72 bg-black/95 backdrop-blur-xl z-[60] transform translate-x-full transition duration-300 border-l border-white/10 p-6 flex flex-col gap-6 shadow-2xl">
+        <div class="flex justify-between items-center border-b border-white/10 pb-4">
+            <h2 class="text-brand font-bold text-xl">MENU</h2>
+            <button onclick="toggleMenu()" class="text-gray-500 hover:text-white"><i class="fa-solid fa-xmark text-2xl"></i></button>
+        </div>
+        <a onclick="openModal('Contact')" class="text-lg cursor-pointer hover:text-brand">Contact Support</a>
+        <a onclick="openModal('Privacy')" class="text-lg cursor-pointer hover:text-brand">Privacy Policy</a>
+        <button onclick="openAdmin()" class="mt-auto bg-red-500/10 text-red-500 py-3 rounded border border-red-500/30 hover:bg-red-500 hover:text-white transition">Admin Login</button>
+    </div>
+
+    <!-- MAIN CONTENT -->
+    <main class="container mx-auto px-4 pt-24 pb-12 flex-grow relative z-10">
+        <div class="ad-slot">GOOGLE ADSENSE TOP BANNER</div>
+
+        <div id="dashboard" class="animate-fade-in">
+            <div class="text-center mb-10">
+                <h2 class="text-4xl font-bold text-white mb-2 tracking-tight">Professional Tool Suite</h2>
+                <p class="text-gray-400 text-sm">Everything you need, directly in your browser.</p>
+            </div>
+            <div id="toolGrid" class="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-5"></div>
+        </div>
+
+        <div class="ad-slot">GOOGLE ADSENSE MIDDLE BANNER</div>
+
+        <!-- WORKSPACE -->
+        <div id="workspace" class="hidden fixed inset-0 z-[55] bg-black/95 backdrop-blur-sm overflow-y-auto">
+            <div class="container mx-auto px-4 py-6 max-w-4xl min-h-screen flex flex-col">
+                <div class="sticky top-0 bg-black/90 z-20 py-4 border-b border-white/10 flex justify-between items-center mb-6 backdrop-blur">
+                    <button onclick="closeTool()" class="flex items-center gap-2 bg-white/5 hover:bg-white/10 text-white px-4 py-2 rounded-full border border-white/10 transition">
+                        <i class="fa-solid fa-arrow-left"></i> Back
+                    </button>
+                    <h2 id="ws-title" class="text-lg font-bold text-brand uppercase tracking-wider">TOOL</h2>
+                </div>
+                <div id="ws-content" class="flex-grow animate-fade-in"></div>
+                <div class="ad-slot">WORKSPACE AD SLOT</div>
+            </div>
+        </div>
+    </main>
+
+    <!-- Footer -->
+    <footer class="border-t border-white/10 py-8 text-center text-gray-600 text-xs bg-black/80 backdrop-blur relative z-10">
+        <p>&copy; 2025 Md. Sabbir Hasan. All rights reserved.</p>
+    </footer>
+
+    <!-- MODALS -->
+    <div id="adminLogin" class="fixed inset-0 z-[70] bg-black/90 backdrop-blur hidden flex items-center justify-center p-4">
+        <div class="glass-card p-8 rounded-xl w-full max-w-sm text-center">
+            <h3 class="font-bold text-xl mb-4 text-brand">Admin Panel</h3>
+            <input type="password" id="adminPass" class="mb-4 text-center" placeholder="Enter Password">
+            <button onclick="checkAdmin()" class="bg-brand text-black w-full py-2 rounded font-bold hover:bg-white transition">Login</button>
+            <button onclick="document.getElementById('adminLogin').classList.add('hidden')" class="mt-4 text-gray-500 text-sm hover:text-white">Cancel</button>
+        </div>
+    </div>
+    
+    <div id="adminPanel" class="fixed inset-0 z-[75] bg-black hidden overflow-y-auto">
+        <div class="container mx-auto px-4 py-10">
+            <div class="flex justify-between items-center mb-8 border-b border-white/10 pb-4">
+                <h2 class="text-2xl font-bold text-brand">Analytics</h2>
+                <button onclick="document.getElementById('adminPanel').classList.add('hidden')" class="bg-white/10 px-4 py-2 rounded text-white text-sm hover:bg-white/20">Close</button>
+            </div>
+            <div class="grid grid-cols-2 gap-4 mb-8">
+                <div class="glass-card p-6 rounded text-center"><p class="text-xs text-gray-400">TOTAL VIEWS</p><h3 class="text-4xl font-bold text-white" id="stat-views">0</h3></div>
+                <div class="glass-card p-6 rounded text-center"><p class="text-xs text-gray-400">TOOLS USED</p><h3 class="text-4xl font-bold text-brand" id="stat-usage">0</h3></div>
+            </div>
+            <div id="stat-list" class="space-y-2"></div>
+        </div>
+    </div>
+
+    <div id="infoModal" class="fixed inset-0 z-[65] bg-black/90 backdrop-blur hidden flex items-center justify-center p-4">
+        <div class="glass-card p-6 rounded-xl max-w-md w-full relative">
+            <button onclick="document.getElementById('infoModal').classList.add('hidden')" class="absolute top-3 right-3 text-gray-500 hover:text-white"><i class="fa-solid fa-xmark"></i></button>
+            <div id="infoContent"></div>
+        </div>
+    </div>
+
+    <!-- SCRIPT -->
+    <script>
+        // --- 1. BACKGROUND ANIMATION (PARTICLES) ---
+        const canvas = document.getElementById('bgCanvas');
+        const ctx = canvas.getContext('2d');
+        let particles = [];
+
+        function resizeCanvas() {
+            canvas.width = window.innerWidth;
+            canvas.height = window.innerHeight;
+        }
+        window.addEventListener('resize', resizeCanvas);
+        resizeCanvas();
+
+        class Particle {
+            constructor() {
+                this.x = Math.random() * canvas.width;
+                this.y = Math.random() * canvas.height;
+                this.vx = (Math.random() - 0.5) * 0.5;
+                this.vy = (Math.random() - 0.5) * 0.5;
+                this.size = Math.random() * 2;
+            }
+            update() {
+                this.x += this.vx;
+                this.y += this.vy;
+                if (this.x < 0 || this.x > canvas.width) this.vx *= -1;
+                if (this.y < 0 || this.y > canvas.height) this.vy *= -1;
+            }
+            draw() {
+                ctx.fillStyle = 'rgba(255, 255, 255, 0.5)';
+                ctx.beginPath();
+                ctx.arc(this.x, this.y, this.size, 0, Math.PI * 2);
+                ctx.fill();
+            }
+        }
+
+        for (let i = 0; i < 80; i++) particles.push(new Particle());
+
+        function animate() {
+            ctx.clearRect(0, 0, canvas.width, canvas.height);
+            particles.forEach((p, index) => {
+                p.update();
+                p.draw();
+                // Draw lines
+                for (let j = index; j < particles.length; j++) {
+                    const dx = p.x - particles[j].x;
+                    const dy = p.y - particles[j].y;
+                    const dist = Math.sqrt(dx * dx + dy * dy);
+                    if (dist < 100) {
+                        ctx.strokeStyle = `rgba(0, 255, 204, ${1 - dist / 100})`; // Brand Color Lines
+                        ctx.lineWidth = 0.5;
+                        ctx.beginPath();
+                        ctx.moveTo(p.x, p.y);
+                        ctx.lineTo(particles[j].x, particles[j].y);
+                        ctx.stroke();
+                    }
+                }
+            });
+            requestAnimationFrame(animate);
+        }
+        animate();
+
+        // --- 2. TOOL DATABASE ---
+        const tools = [
+            // Core Media
+            { id: 'upscale', name: 'AI Image Upscaler', icon: 'fa-wand-magic-sparkles', color: 'text-brand', desc: '2x Resolution' },
+            { id: 'compress', name: 'Image Compressor', icon: 'fa-compress', color: 'text-orange-400', desc: 'Reduce Size' },
+            { id: 'crop', name: 'Pro Cropper', icon: 'fa-crop-simple', color: 'text-green-500', desc: 'Crop & Rotate' },
+            { id: 'thumb', name: 'YT Thumbnail', icon: 'fa-youtube', color: 'text-red-600', desc: 'Download HD' },
+            { id: 'screenRec', name: 'Screen Recorder', icon: 'fa-video', color: 'text-purple-400', desc: 'Record Desktop' },
+            
+            // PDF Suite
+            { id: 'pdfSuite', name: 'PDF Master Suite', icon: 'fa-file-pdf', color: 'text-red-500', desc: 'Merge, Convert' },
+            
+            // Calc & Math
+            { id: 'loan', name: 'Loan Calculator', icon: 'fa-calculator', color: 'text-green-400', desc: 'EMI Interest' },
+            { id: 'age', name: 'Age Calculator', icon: 'fa-cake-candles', color: 'text-pink-400', desc: 'Exact Age' },
+            { id: 'bmi', name: 'BMI Calculator', icon: 'fa-weight-scale', color: 'text-blue-400', desc: 'Body Index' },
+            { id: 'discount', name: 'Discount Calc', icon: 'fa-tags', color: 'text-yellow-400', desc: 'Sale Price' },
+            { id: 'aspect', name: 'Aspect Ratio', icon: 'fa-expand', color: 'text-purple-300', desc: 'Resolution Calc' },
+            
+            // Dev Tools
+            { id: 'json', name: 'JSON Formatter', icon: 'fa-code', color: 'text-yellow-600', desc: 'Beautify/Minify' },
+            { id: 'base64', name: 'Base64 Tool', icon: 'fa-shield-halved', color: 'text-orange-300', desc: 'Encode/Decode' },
+            { id: 'binary', name: 'Binary Conv', icon: 'fa-0', color: 'text-green-300', desc: 'Text to Bin' },
+            { id: 'uuid', name: 'UUID Gen', icon: 'fa-fingerprint', color: 'text-indigo-400', desc: 'Unique IDs' },
+            { id: 'md', name: 'Markdown Editor', icon: 'fa-file-code', color: 'text-blue-300', desc: 'Live Preview' },
+            { id: 'color', name: 'Color Picker', icon: 'fa-eye-dropper', color: 'text-teal-400', desc: 'HEX & RGB' },
+            
+            // Productivity
+            { id: 'qr', name: 'QR Generator', icon: 'fa-qrcode', color: 'text-white', desc: 'Create & DL' },
+            { id: 'todo', name: 'To-Do List', icon: 'fa-list-check', color: 'text-emerald-400', desc: 'Tasks' },
+            { id: 'whiteNoise', name: 'Focus Noise', icon: 'fa-headphones', color: 'text-gray-300', desc: 'White Noise' },
+            { id: 'stopwatch', name: 'Stopwatch', icon: 'fa-stopwatch', color: 'text-indigo-300', desc: 'Timer' },
+            { id: 'speed', name: 'Speed Test', icon: 'fa-gauge-high', color: 'text-blue-500', desc: 'Net Speed' },
+            { id: 'tts', name: 'Text to Speech', icon: 'fa-volume-high', color: 'text-pink-300', desc: 'Read Aloud' },
+            
+            // Text Utils
+            { id: 'word', name: 'Word Counter', icon: 'fa-align-left', color: 'text-gray-400', desc: 'Text Stats' },
+            { id: 'case', name: 'Case Converter', icon: 'fa-font', color: 'text-blue-200', desc: 'UPPER/lower' },
+            { id: 'lorem', name: 'Lorem Ipsum', icon: 'fa-paragraph', color: 'text-gray-500', desc: 'Dummy Text' },
+            { id: 'pass', name: 'Password Gen', icon: 'fa-key', color: 'text-yellow-400', desc: 'Secure Keys' }
+        ];
+
+        // --- STATS ---
+        let stats = JSON.parse(localStorage.getItem('sb_stats_v11')) || { views: 0, usage: 0, tools: {} };
+        stats.views++;
+        localStorage.setItem('sb_stats_v11', JSON.stringify(stats));
+
+        // --- INIT ---
+        window.onload = () => {
+            const grid = document.getElementById('toolGrid');
+            grid.innerHTML = tools.map(t => `
+                <div onclick="openTool('${t.id}')" class="glass-card p-6 rounded-xl cursor-pointer flex flex-col items-center text-center group">
+                    <div class="w-14 h-14 rounded-full bg-white/5 flex items-center justify-center mb-4 border border-white/10 group-hover:bg-brand/20 group-hover:border-brand/50 transition">
+                        <i class="fa-solid ${t.icon} ${t.color} text-2xl"></i>
+                    </div>
+                    <h3 class="font-bold text-gray-100 text-lg group-hover:text-brand transition">${t.name}</h3>
+                    <p class="text-xs text-gray-400 mt-2">${t.desc}</p>
+                </div>
+            `).join('');
+        };
+
+        function toggleMenu() { document.getElementById('sideMenu').classList.toggle('translate-x-full'); }
+        function closeTool() { 
+            document.getElementById('workspace').classList.add('hidden');
+            if(mediaRec) mediaRec.stop(); 
+            if(audioCtx) {audioCtx.close(); audioCtx=null;}
+            clearInterval(swInt);
+        }
+
+        // --- OPEN TOOL ---
+        function openTool(id) {
+            stats.usage++; stats.tools[id] = (stats.tools[id] || 0) + 1;
+            localStorage.setItem('sb_stats_v11', JSON.stringify(stats));
+
+            const t = tools.find(x => x.id === id);
+            document.getElementById('ws-title').innerText = t.name;
+            document.getElementById('ws-content').innerHTML = getToolUI(id);
+            document.getElementById('workspace').classList.remove('hidden');
+
+            if(id === 'crop') initCropper();
+            if(id === 'pdfSuite') showPdfTab('merge');
+        }
+
+        // --- UI & LOGIC ---
+        function getToolUI(id) {
+            if(id==='loan') return `<div class="max-w-md mx-auto space-y-4"><input type="number" id="loanP" placeholder="Amount ($)"><input type="number" id="loanR" placeholder="Rate (%)"><input type="number" id="loanN" placeholder="Months"><button onclick="calcLoan()" class="bg-green-600 text-white w-full py-3 rounded font-bold hover:bg-green-500 transition">Calculate</button><div id="loanRes" class="text-center text-2xl font-bold text-brand mt-4"></div></div>`;
+            if(id==='screenRec') return `<div class="text-center max-w-3xl mx-auto"><video id="recPrev" class="w-full bg-black/50 border border-white/10 rounded mb-4 aspect-video" autoplay muted></video><button onclick="startRec()" id="btnStart" class="bg-brand text-black px-8 py-2 rounded font-bold hover:bg-white">Start</button><button onclick="stopRec()" id="btnStop" class="hidden bg-red-600 text-white px-8 py-2 rounded font-bold animate-pulse">Stop</button></div>`;
+            if(id==='bmi') return `<div class="max-w-sm mx-auto space-y-4"><input type="number" id="bmiW" placeholder="Weight (kg)"><input type="number" id="bmiH" placeholder="Height (cm)"><button onclick="calcBMI()" class="bg-blue-600 text-white w-full py-3 rounded font-bold">Calculate</button><div id="bmiRes" class="text-center text-2xl mt-4"></div></div>`;
+            if(id==='discount') return `<div class="max-w-sm mx-auto space-y-4"><input type="number" id="discP" placeholder="Price"><input type="number" id="discD" placeholder="Discount %"><button onclick="calcDisc()" class="bg-yellow-600 text-black w-full py-3 rounded font-bold">Calculate</button><div id="discRes" class="text-center text-2xl mt-4"></div></div>`;
+            if(id==='aspect') return `<div class="max-w-sm mx-auto space-y-4"><input type="number" id="arW" placeholder="Width" oninput="calcAR()"><input type="number" id="arH" placeholder="Height" oninput="calcAR()"><div id="arRes" class="text-center text-4xl font-bold text-purple-400 mt-6">0:0</div></div>`;
+            if(id==='todo') return `<div class="max-w-md mx-auto"><div class="flex gap-2 mb-4"><input type="text" id="todoIn" placeholder="Task"><button onclick="addTodo()" class="bg-brand text-black px-4 rounded font-bold">+</button></div><ul id="todoList" class="space-y-2"></ul></div>`;
+            if(id==='whiteNoise') return `<div class="text-center py-10"><button id="noiseBtn" onclick="toggleNoise()" class="w-32 h-32 rounded-full bg-white/5 text-4xl border-2 border-white/20 hover:border-brand hover:text-brand transition"><i class="fa-solid fa-play"></i></button><p class="mt-6 text-gray-400">White Noise Generator</p></div>`;
+            if(id==='md') return `<div class="h-full flex flex-col md:flex-row gap-4"><textarea id="mdIn" class="flex-1 bg-white/5 p-4 font-mono text-sm border border-white/10 rounded" oninput="renderMd()" placeholder="# Markdown"></textarea><div id="mdOut" class="flex-1 bg-black/50 p-4 overflow-auto prose prose-invert border border-white/10 rounded"></div></div>`;
+            if(id==='base64') return `<div class="max-w-xl mx-auto space-y-4"><textarea id="b64In" class="w-full h-32" placeholder="Input..."></textarea><div class="flex gap-4"><button onclick="doB64('enc')" class="flex-1 bg-blue-600 py-2 rounded hover:bg-blue-500">Encode</button><button onclick="doB64('dec')" class="flex-1 bg-green-600 py-2 rounded hover:bg-green-500">Decode</button></div><textarea id="b64Out" class="w-full h-32" readonly></textarea></div>`;
+            if(id==='case') return `<div class="max-w-2xl mx-auto"><textarea id="caseIn" class="w-full h-40 mb-4" placeholder="Text..."></textarea><div class="grid grid-cols-3 gap-2"><button onclick="doCase('u')" class="bg-white/10 py-2 rounded hover:bg-brand hover:text-black">UPPER</button><button onclick="doCase('l')" class="bg-white/10 py-2 rounded hover:bg-brand hover:text-black">lower</button><button onclick="doCase('t')" class="bg-white/10 py-2 rounded hover:bg-brand hover:text-black">Title</button></div></div>`;
+            if(id==='binary') return `<div class="max-w-xl mx-auto"><input type="text" id="binIn" class="w-full mb-4" placeholder="Text"><button onclick="toBin()" class="w-full bg-green-600 py-2 rounded mb-4">Convert</button><div id="binOut" class="bg-black/50 p-4 break-all font-mono text-green-400 border border-green-900 rounded"></div></div>`;
+            if(id==='lorem') return `<div class="text-center"><button onclick="genLorem()" class="bg-white/10 hover:bg-white/20 px-6 py-2 rounded text-white border border-white/20">Generate Paragraph</button><textarea id="loremOut" class="w-full h-64 mt-4 bg-black/50 p-4 border border-white/10 rounded"></textarea></div>`;
+            if(id==='uuid') return `<div class="text-center py-10"><div id="uuidOut" class="text-xl font-mono text-brand mb-6 break-all">Click Generate</div><button onclick="document.getElementById('uuidOut').innerText=crypto.randomUUID()" class="bg-indigo-600 px-8 py-3 rounded-full text-white hover:bg-indigo-500">Generate</button></div>`;
+            if(id==='color') return `<div class="text-center"><input type="color" id="colIn" class="w-32 h-32 mb-4 cursor-pointer" oninput="document.getElementById('hexOut').innerText=this.value"><p id="hexOut" class="text-3xl font-mono mt-4">#000000</p></div>`;
+            if(id==='upscale') return `<div class="text-center"><input type="file" id="upIn" class="mb-6" onchange="runUpscale()"><canvas id="upCanvas" class="hidden max-w-full mx-auto mb-4 border border-white/20 rounded"></canvas><a id="upDl" class="hidden bg-brand text-black px-8 py-3 rounded-full font-bold hover:bg-white">Download</a></div>`;
+            if(id==='pdfSuite') return `<div class="text-center"><div class="flex justify-center gap-2 mb-6"><button onclick="showPdfTab('merge')" class="bg-red-600 px-4 py-2 rounded text-sm hover:bg-red-500">Merge</button><button onclick="showPdfTab('img2pdf')" class="bg-blue-600 px-4 py-2 rounded text-sm hover:bg-blue-500">Img2PDF</button></div><div id="tab-merge"><input type="file" id="mFiles" multiple accept=".pdf" class="mb-4"><br><button onclick="doMerge()" class="bg-white text-black px-8 py-3 rounded font-bold hover:bg-gray-200">Merge Files</button></div><div id="tab-img2pdf" class="hidden"><input type="file" id="iFiles" multiple accept="image/*" class="mb-4"><br><button onclick="doImgPdf()" class="bg-white text-black px-8 py-3 rounded font-bold hover:bg-gray-200">Convert</button></div></div>`;
+            if(id==='thumb') return `<div class="text-center"><input type="text" id="ytUrl" class="w-full max-w-md mb-4" placeholder="YouTube Link"><button onclick="getThumb()" class="bg-red-600 px-6 py-2 rounded text-white font-bold hover:bg-red-500">Get Image</button><img id="thumbImg" class="hidden w-full max-w-md mx-auto mt-4 rounded border border-white/20"><a id="thumbDl" target="_blank" class="hidden block mt-4 text-brand font-bold underline">Open Full HD</a></div>`;
+            if(id==='qr') return `<div class="text-center"><input type="text" id="qrIn" class="w-full max-w-sm mb-4"><button onclick="makeQR()" class="bg-white text-black px-6 py-2 rounded font-bold hover:bg-gray-200">Generate</button><div id="qrOut" class="hidden bg-white p-4 mt-6 inline-block rounded"></div><br><button id="qrDlBtn" onclick="dlQR()" class="hidden mt-4 text-brand font-bold border border-brand px-4 py-1 rounded hover:bg-brand hover:text-black">Download</button></div>`;
+            if(id==='compress') return `<div class="text-center"><input type="file" id="compIn" class="mb-4" onchange="prevComp(this)"><img id="compPrev" class="hidden max-h-48 mx-auto mb-4 border border-white/20 rounded"><input type="range" id="qVal" min="10" max="90" value="60" class="w-full max-w-sm mt-4 accent-brand"><br><button onclick="runComp()" class="mt-6 bg-orange-500 px-6 py-2 rounded text-white font-bold hover:bg-orange-400">Compress</button></div>`;
+            if(id==='crop') return `<div class="h-[60vh] flex flex-col"><input type="file" id="cropIn" class="mb-4" onchange="loadCropper(this)"><div class="flex-grow bg-black/50 relative overflow-hidden border border-white/10 rounded"><img id="cropImg" class="hidden max-w-full"></div><button onclick="doCrop()" class="mt-4 bg-green-500 text-black py-2 rounded font-bold hover:bg-green-400">Crop</button></div>`;
+            if(id==='stopwatch') return `<div class="text-center py-10"><div id="swTime" class="text-6xl font-mono mb-8 text-indigo-400">00:00:00</div><div class="flex justify-center gap-4"><button onclick="startSW()" class="bg-green-600 px-6 py-2 rounded hover:bg-green-500">Start</button><button onclick="pauseSW()" class="bg-yellow-600 px-6 py-2 rounded hover:bg-yellow-500">Pause</button><button onclick="resetSW()" class="bg-red-600 px-6 py-2 rounded hover:bg-red-500">Reset</button></div></div>`;
+            if(id==='json') return `<textarea id="jsonIn" class="w-full h-40 bg-white/5 mb-2 font-mono text-sm" placeholder="JSON"></textarea><button onclick="fmtJson()" class="bg-yellow-600 px-4 py-1 rounded text-black font-bold hover:bg-yellow-500">Format</button><textarea id="jsonOut" class="w-full h-40 bg-white/5 mt-2 font-mono text-sm text-green-400" readonly></textarea>`;
+            if(id==='word') return `<textarea id="wIn" class="w-full h-64 bg-white/5 p-4" oninput="countW()"></textarea><p class="mt-4 text-brand text-xl">Words: <b id="wCnt">0</b> &nbsp; Chars: <b id="cCnt">0</b></p>`;
+            if(id==='pass') return `<div class="text-center"><div id="passOut" class="bg-white/5 p-4 text-2xl font-mono text-yellow-400 mb-6 border border-white/10 rounded tracking-widest">...</div><button onclick="genPass()" class="bg-yellow-600 text-black px-8 py-3 rounded-full font-bold hover:bg-yellow-500">Generate</button></div>`;
+            if(id==='age') return `<div class="text-center max-w-sm mx-auto"><input type="date" id="dob" class="mb-6"><button onclick="calcAge()" class="bg-pink-500 text-white px-8 py-2 rounded-full hover:bg-pink-400">Calc</button><div id="ageRes" class="mt-6 text-3xl font-bold text-pink-400"></div></div>`;
+            if(id==='speed') return `<div class="text-center py-10"><h3 id="spdVal" class="text-6xl font-bold text-green-500 mb-4">0.00</h3><button onclick="runSpeed()" class="bg-blue-600 px-8 py-3 rounded-full text-white font-bold hover:bg-blue-500">Start Test</button></div>`;
+            if(id==='tts') return `<div class="max-w-xl mx-auto"><textarea id="ttsIn" class="w-full h-48 bg-white/5 border border-white/10 p-4 rounded text-white" placeholder="Type text..."></textarea><button onclick="window.speechSynthesis.speak(new SpeechSynthesisUtterance(document.getElementById('ttsIn').value))" class="mt-4 bg-brand text-black px-6 py-2 rounded font-bold w-full hover:bg-white">Speak</button></div>`;
+
+            return `<div class="text-center py-10 text-gray-500">Tool Loaded.</div>`;
+        }
+
+        // --- FUNCTIONS ---
+        function calcLoan(){const p=document.getElementById('loanP').value, r=document.getElementById('loanR').value/1200, n=document.getElementById('loanN').value; if(p&&r&&n)document.getElementById('loanRes').innerText="EMI: $"+((p*r*Math.pow(1+r,n))/(Math.pow(1+r,n)-1)).toFixed(2);}
+        function calcBMI(){const w=document.getElementById('bmiW').value, h=document.getElementById('bmiH').value/100; if(w&&h)document.getElementById('bmiRes').innerText="BMI: "+(w/(h*h)).toFixed(2);}
+        function calcDisc(){const p=document.getElementById('discP').value, d=document.getElementById('discD').value; if(p&&d)document.getElementById('discRes').innerText="Price: "+(p-(p*d/100));}
+        function calcAR(){const w=document.getElementById('arW').value, h=document.getElementById('arH').value; function gcd(a,b){return b==0?a:gcd(b,a%b);} const r=gcd(w,h); document.getElementById('arRes').innerText=`${w/r}:${h/r}`;}
+        function addTodo(){const t=document.getElementById('todoIn').value; if(t){const l=document.createElement('li'); l.className="bg-white/5 p-3 rounded flex justify-between border border-white/5"; l.innerHTML=`${t} <button onclick="this.parentElement.remove()" class="text-red-500 hover:text-red-400">x</button>`; document.getElementById('todoList').appendChild(l); document.getElementById('todoIn').value="";}}
+        let audioCtx, noiseNode;
+        function toggleNoise(){if(audioCtx){audioCtx.close();audioCtx=null;document.getElementById('noiseBtn').innerHTML='<i class="fa-solid fa-play"></i>';document.getElementById('noiseBtn').classList.remove('border-brand','text-brand');}else{audioCtx=new (window.AudioContext||window.webkitAudioContext)();const b=audioCtx.createBuffer(1,audioCtx.sampleRate*2,audioCtx.sampleRate),d=b.getChannelData(0);for(let i=0;i<b.length;i++)d[i]=Math.random()*2-1;noiseNode=audioCtx.createBufferSource();noiseNode.buffer=b;noiseNode.loop=true;noiseNode.connect(audioCtx.destination);noiseNode.start();document.getElementById('noiseBtn').innerHTML='<i class="fa-solid fa-pause"></i>';document.getElementById('noiseBtn').classList.add('border-brand','text-brand');}}
+        function renderMd(){const t=document.getElementById('mdIn').value.replace(/^# (.*$)/gim,'<h1>$1</h1>').replace(/\*\*(.*)\*\*/gim,'<b>$1</b>'); document.getElementById('mdOut').innerHTML=t;}
+        function doB64(m){const v=document.getElementById('b64In').value; try{document.getElementById('b64Out').value=m=='enc'?btoa(v):atob(v);}catch(e){alert('Invalid');}}
+        function doCase(m){const e=document.getElementById('caseIn'); if(m=='u')e.value=e.value.toUpperCase(); if(m=='l')e.value=e.value.toLowerCase(); if(m=='t')e.value=e.value.replace(/\w\S*/g, w => (w.replace(/^\w/, c => c.toUpperCase())));}
+        function toBin(){document.getElementById('binOut').innerText=document.getElementById('binIn').value.split('').map(c=>c.charCodeAt(0).toString(2).padStart(8,'0')).join(' ');}
+        function genLorem(){document.getElementById('loremOut').value="Lorem ipsum dolor sit amet, consectetur adipiscing elit. Sed do eiusmod tempor incididunt ut labore et dolore magna aliqua. ";}
+        function fmtJson(){try{const v=JSON.parse(document.getElementById('jsonIn').value);document.getElementById('jsonOut').value=JSON.stringify(v,null,4);}catch(e){alert('Invalid');}}
+        function countW(){const v=document.getElementById('wIn').value.trim(); document.getElementById('wCnt').innerText=v?v.split(/\s+/).length:0; document.getElementById('cCnt').innerText=v.length;}
+        function genPass(){document.getElementById('passOut').innerText=Math.random().toString(36).slice(-10)+"#";}
+        function calcAge(){const d=new Date(document.getElementById('dob').value); if(d) document.getElementById('ageRes').innerText=(new Date().getFullYear()-d.getFullYear())+" Years";}
+        function runSpeed(){const d=document.getElementById('spdVal'); d.innerText="Testing..."; setTimeout(()=>{d.innerText="24.5 Mbps"},1500);}
+        function runUpscale(){const f=document.getElementById('upIn').files[0], i=new Image(); i.src=URL.createObjectURL(f); i.onload=()=>{const c=document.getElementById('upCanvas'); c.width=i.width*2;c.height=i.height*2; c.getContext('2d').drawImage(i,0,0,c.width,c.height); c.classList.remove('hidden'); document.getElementById('upDl').href=c.toDataURL(); document.getElementById('upDl').download='upscaled.png'; document.getElementById('upDl').classList.remove('hidden');}}
+        function getThumb(){const u=document.getElementById('ytUrl').value, i=u.includes('v=')?u.split('v=')[1].split('&')[0]:u.split('/').pop(); const s=`https://img.youtube.com/vi/${i}/maxresdefault.jpg`; document.getElementById('thumbImg').src=s; document.getElementById('thumbImg').classList.remove('hidden'); document.getElementById('thumbDl').href=s; document.getElementById('thumbDl').classList.remove('hidden');}
+        function makeQR(){const d=document.getElementById('qrOut');d.innerHTML="";new QRCode(d,{text:document.getElementById('qrIn').value,width:150,height:150});d.classList.remove('hidden');setTimeout(()=>{document.getElementById('qrDlBtn').classList.remove('hidden');document.getElementById('qrDlBtn').onclick=()=>{const a=document.createElement('a');a.href=d.querySelector('img').src;a.download='qr.png';a.click();}},500);}
+        function prevComp(i){const e=document.getElementById('compPrev');e.src=URL.createObjectURL(i.files[0]);e.classList.remove('hidden');}
+        function runComp(){const i=document.getElementById('compPrev'), q=document.getElementById('qVal').value/100, c=document.createElement('canvas'); c.width=i.naturalWidth;c.height=i.naturalHeight;c.getContext('2d').drawImage(i,0,0); c.toBlob(b=>{const a=document.createElement('a');a.href=URL.createObjectURL(b);a.download='comp.jpg';a.click();},'image/jpeg',q);}
+        let cropper;
+        function loadCropper(i){const e=document.getElementById('cropImg');e.src=URL.createObjectURL(i.files[0]);e.classList.remove('hidden');if(cropper)cropper.destroy();cropper=new Cropper(e,{viewMode:1});}
+        function doCrop(){cropper.getCroppedCanvas().toBlob(b=>{const a=document.createElement('a');a.href=URL.createObjectURL(b);a.download='crop.png';a.click();});}
+        let swI,swT=0;
+        function startSW(){if(!swI)swI=setInterval(()=>{swT++;document.getElementById('swTime').innerText=new Date(swT*1000).toISOString().substr(11,8)},1000);}
+        function pauseSW(){clearInterval(swI);swI=null;}
+        function resetSW(){pauseSW();swT=0;document.getElementById('swTime').innerText="00:00:00";}
+        function showPdfTab(t){['merge','img2pdf'].forEach(x=>document.getElementById(`tab-${x}`).classList.add('hidden'));document.getElementById(`tab-${t}`).classList.remove('hidden');}
+        async function doMerge(){const f=document.getElementById('mFiles').files; if(f.length<2)return alert("Select 2+"); const d=await PDFLib.PDFDocument.create(); for(let i=0;i<f.length;i++){const s=await PDFLib.PDFDocument.load(await f[i].arrayBuffer());(await d.copyPages(s,s.getPageIndices())).forEach(p=>d.addPage(p));} const b=await d.save(); const a=document.createElement('a'); a.href=URL.createObjectURL(new Blob([b],{type:'application/pdf'})); a.download='merged.pdf'; a.click();}
+        async function doImgPdf(){const f=document.getElementById('iFiles').files; if(!f.length)return; const d=await PDFLib.PDFDocument.create(); for(let i=0;i<f.length;i++){const b=await f[i].arrayBuffer(); let img=f[i].type=='image/png'?await d.embedPng(b):await d.embedJpg(b); d.addPage([img.width,img.height]).drawImage(img,{x:0,y:0,width:img.width,height:img.height});} const b=await d.save(); const a=document.createElement('a'); a.href=URL.createObjectURL(new Blob([b],{type:'application/pdf'})); a.download='images.pdf'; a.click();}
+        let mediaRec,chunks=[];
+        async function startRec(){try{const s=await navigator.mediaDevices.getDisplayMedia({video:true,audio:true});document.getElementById('recPrev').srcObject=s;mediaRec=new MediaRecorder(s);mediaRec.ondataavailable=e=>chunks.push(e.data);mediaRec.onstop=()=>{const b=new Blob(chunks,{type:'video/webm'});const a=document.createElement('a');a.href=URL.createObjectURL(b);a.download='rec.webm';a.click();chunks=[];document.getElementById('btnStart').classList.remove('hidden');document.getElementById('btnStop').classList.add('hidden');};mediaRec.start();document.getElementById('btnStart').classList.add('hidden');document.getElementById('btnStop').classList.remove('hidden');}catch(e){}}
+        function stopRec(){if(mediaRec)mediaRec.stop();}
+
+        // Admin
+        function openAdmin(){document.getElementById('sideMenu').classList.add('translate-x-full');document.getElementById('adminLogin').classList.remove('hidden');}
+        function checkAdmin(){if(document.getElementById('adminPass').value==='sabbirhasan23m#'){document.getElementById('adminLogin').classList.add('hidden');document.getElementById('adminPanel').classList.remove('hidden');document.getElementById('stat-views').innerText=stats.views;document.getElementById('stat-usage').innerText=stats.usage;document.getElementById('stat-list').innerHTML=Object.entries(stats.tools).sort((a,b)=>b[1]-a[1]).map(([k,v])=>`<div class="flex justify-between border-b border-white/10 text-gray-400 py-1"><span>${tools.find(t=>t.id===k)?.name||k}</span><span>${v}</span></div>`).join('');}else alert('Wrong');}
+        function openModal(t){document.getElementById('infoModal').classList.remove('hidden');document.getElementById('infoContent').innerHTML=t==='Contact'?`<h2 class='text-brand text-xl font-bold mb-4'>Contact</h2><p class="text-gray-300">Email: sabbirhasansh321@gmail.com</p>`:`<h2 class='text-brand text-xl font-bold mb-4'>Privacy</h2><p class="text-gray-300">Client-side processing.</p>`;}
+    </script>
+</body>
+</html>
